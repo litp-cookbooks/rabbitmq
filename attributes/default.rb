@@ -1,3 +1,5 @@
+default['rabbitmq']['service_name'] = node['platform'] == 'smartos' ? 'rabbitmq' : 'rabbitmq-server'
+
 # being nil, the rabbitmq defaults will be used
 default['rabbitmq']['nodename']  = nil
 default['rabbitmq']['address']  = nil

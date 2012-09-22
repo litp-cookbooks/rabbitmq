@@ -33,7 +33,7 @@ template "/etc/rabbitmq/rabbitmq-env.conf" do
   owner "root"
   group "root"
   mode 0644
-  notifies :restart, "service[rabbitmq-server]"
+  notifies :restart, "service[#{node['rabbitmq']['service_name']}]"
 end
 
 case node['platform']
@@ -70,6 +70,14 @@ when "redhat", "centos", "scientific", "amazon", "fedora"
     end
   end
 
+when 'smartos'
+
+  service "epmd" do
+    action [:enable, :start]
+  end
+
+  package 'rabbitmq'
+
 end
 
 ## You'll see setsid used in all the init statements in this cookbook. This
@@ -78,12 +86,14 @@ end
 ## when called from chef. The setsid command forces the subprocess into a state
 ## where it can daemonize properly. -Kevin (thanks to Daniel DeLeo for the help)
 
-service "rabbitmq-server" do
-  start_command "setsid /etc/init.d/rabbitmq-server start"
-  stop_command "setsid /etc/init.d/rabbitmq-server stop"
-  restart_command "setsid /etc/init.d/rabbitmq-server restart"
-  status_command "setsid /etc/init.d/rabbitmq-server status"
-  supports :status => true, :restart => true
+unless node['platform'] == 'smartos'
+  service "rabbitmq-server" do
+    start_command "setsid /etc/init.d/rabbitmq-server start"
+    stop_command "setsid /etc/init.d/rabbitmq-server stop"
+    restart_command "setsid /etc/init.d/rabbitmq-server restart"
+    status_command "setsid /etc/init.d/rabbitmq-server status"
+    supports :status => true, :restart => true
+  end
 end
 
 
@@ -94,7 +104,7 @@ else
 end
 
 if node['rabbitmq']['cluster'] and node['rabbitmq']['erlang_cookie'] != existing_erlang_key
-  service "rabbitmq-server" do
+  service node['rabbitmq']['service_name'] do
     action :stop
   end
 
@@ -105,7 +115,7 @@ if node['rabbitmq']['cluster'] and node['rabbitmq']['erlang_cookie'] != existing
     mode 0400
   end
 
-  service "rabbitmq-server" do
+  service node['rabbitmq']['service_name'] do
     action :start
   end
 end
@@ -115,9 +125,9 @@ template "/etc/rabbitmq/rabbitmq.config" do
   owner "root"
   group "root"
   mode 0644
-  notifies :restart, "service[rabbitmq-server]", :immediately
+  notifies :restart, "service[#{node['rabbitmq']['service_name']}]", :immediately
 end
 
-service "rabbitmq-server" do
+service node['rabbitmq']['service_name'] do
   action [ :enable, :start ]
 end
